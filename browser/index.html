@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Abstractrrr client-side JavaScript example</title>
+    <style>
+      :root {
+        --pink: #EF15BF;
+        --blue: #15AEEF;
+      }
+      html {
+        color-scheme: dark light;
+        line-height: 1.4;
+      }
+      body {
+        padding: 0 30px;
+        font-family: sans-serif;
+      }
+
+      button {
+        font: inherit;
+        background: var(--pink);
+        border: 0;
+        padding: 0.5em 1em;
+        color: white;
+        border-radius: 2px;
+        cursor: pointer;
+      }
+
+      input {
+        font: inherit;
+        width: 100%;
+        max-width: 800px;
+        border: 2px solid var(--pink);
+        padding: 0.5em;
+        border-radius: 2px;
+      }
+
+      input:focus, button:focus {
+        outline: 1px dashed var(--blue);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Abstractrrr client-side JavaScript example</h1>
+    <p>
+      Add your Abstractrrr token to the URL as query param <code>token</code>,
+      e.g. <code>?token=token_abc123</code>, and port (if not using the default <code>9999</code>), e.g. <code>?token=abc123&port=1337</code>.
+    </p>
+    <p>Your data will appear below.</p>
+
+    <br />
+    <br />
+
+    <h2>Send Data</h2>
+    <p>
+      You can send JSON data by typing below and pressing <strong>Send</strong>.
+    </p>
+
+    <form id="send-form">
+      <input type="text" name="payload" />
+      <!-- <textarea name="payload" cols="60" rows="20"></textarea> -->
+
+      <br />
+      <br />
+      <button type="submit">Send</button>
+    </form>
+
+    <h2>Output</h2>
+
+    <pre id="output">No output. Is the Abstractrrr server running?</pre>
+
+    <script>
+      // All of the output
+      let outputData = "";
+
+      // HTML elements
+      let outputElement = null;
+      let sendForm = null;
+
+      // Web socket
+      let socket = null;
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // init HTML elements
+        outputElement = document.getElementById("output");
+        sendForm = document.getElementById("send-form");
+
+        sendForm.addEventListener("submit", handleFormSubmit);
+
+        // init web socket connection with token from the URL
+        const token = tokenFromURL();
+        const port = portFromURL()
+        initWebSocketClient(token, port);
+      });
+
+      function handleFormSubmit(evt) {
+        evt.preventDefault();
+
+        const formData = new FormData(evt.target);
+        const { payload } = Object.fromEntries(formData.entries());
+
+        console.log('Sending payload', payload)
+
+        socket.send(payload)
+      }
+
+      function sendData(data) {}
+
+      function tokenFromURL() {
+        const params = new URLSearchParams(location.search);
+        return params.get("token");
+      }
+
+      function portFromURL() {
+        const params = new URLSearchParams(location.search);
+        return params.get("port") || "9999";
+      }
+
+      function initWebSocketClient(token, port) {
+        console.log(`Connecting to web sockets at URL ws://localhost:${port}/v1/subscribe with token: ${token}`);
+
+        // Create WebSocket connection.
+        socket = new WebSocket(`ws://localhost:${port}/v1/subscribe`);
+
+        socket.addEventListener("close", (event) => {
+          console.error("event type: close", event);
+        });
+
+        socket.addEventListener("error", (event) => {
+          console.error("event type: error", event);
+        });
+
+        socket.addEventListener("message", (event) => {
+          console.log("event type: message", event);
+
+          const parsedData = JSON.parse(event.data);
+          const formattedData = JSON.stringify(parsedData, null, 2);
+
+          outputData = formattedData + "\n\n" + outputData;
+          outputElement.innerHTML = outputData;
+        });
+
+        socket.addEventListener("open", (event) => {
+          // Send the auth token
+          console.log("Sending token payload:", { token });
+          socket.send(JSON.stringify({ token }));
+        });
+      }
+    </script>
+  </body>
+</html>
